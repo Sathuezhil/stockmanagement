@@ -1,8 +1,14 @@
 import { spawnSync } from "node:child_process";
 
-if (process.env.NETLIFY) {
-  const { getConnectionString } = await import("@netlify/database");
-  process.env.DATABASE_URL = getConnectionString();
+let hosted = false;
+if (!process.env.DATABASE_URL) {
+  try {
+    const { getConnectionString } = await import("@netlify/database");
+    process.env.DATABASE_URL = getConnectionString();
+    hosted = true;
+  } catch {
+    hosted = false;
+  }
 }
 
 function run(command) {
@@ -11,7 +17,8 @@ function run(command) {
 }
 
 run("npx prisma generate");
-if (process.env.NETLIFY) {
+if (hosted) {
+  console.log("Applying the hosted database schema and stationery catalog.");
   run("npx prisma migrate deploy");
   run("npx tsx prisma/seed.ts");
 }
