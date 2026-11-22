@@ -1,15 +1,17 @@
+import "server-only";
 import { createRequire } from "node:module";
 import { PrismaClient } from "@prisma/client";
+import { hostedDatabaseUrl } from "@/lib/hosted-db";
 
 const nodeRequire = createRequire(import.meta.url);
 
-if (!process.env.DATABASE_URL) {
-  try {
-    const { getConnectionString } = nodeRequire("@netlify/database") as typeof import("@netlify/database");
-    process.env.DATABASE_URL = getConnectionString();
-  } catch {
-    // Local development reads DATABASE_URL from .env when the client starts.
-  }
+try {
+  const { getConnectionString } = nodeRequire("@netlify/database") as typeof import("@netlify/database");
+  const hostedUrl = getConnectionString();
+  if (hostedUrl) process.env.DATABASE_URL = hostedUrl;
+} catch (error) {
+  if (hostedDatabaseUrl) process.env.DATABASE_URL = hostedDatabaseUrl;
+  else console.error("hosted-db", error instanceof Error ? error.name : "unavailable");
 }
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
