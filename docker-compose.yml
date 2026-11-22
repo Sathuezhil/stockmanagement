@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: stock-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: stock
+      POSTGRES_DB: stockmanagement
+    ports:
+      - "5433:5432"
+    volumes:
+      - stock_pg:/var/lib/postgresql/data
+
+volumes:
+  stock_pg:
