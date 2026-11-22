@@ -1,4 +1,12 @@
+import { createRequire } from "node:module";
 import { PrismaClient } from "@prisma/client";
+
+const nodeRequire = createRequire(import.meta.url);
+
+if (process.env.NETLIFY) {
+  const { getConnectionString } = nodeRequire("@netlify/database") as typeof import("@netlify/database");
+  process.env.DATABASE_URL = getConnectionString();
+}
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
