@@ -11,19 +11,6 @@ const roles: { key: UserRole; name: string; description: string }[] = [
   { key: "STAFF", name: "Staff", description: "View products, move stock, and record sales" },
 ];
 
-const SAMPLE_SKUS = [
-  "ELEC-TV-55",
-  "ELEC-EB-01",
-  "GROC-RICE-5",
-  "GROC-OIL-15",
-  "BEV-WAT-500",
-  "BEV-OJ-1",
-  "HARD-DRILL-18",
-  "HARD-SCR-10",
-  "STAT-PEN-12",
-  "STAT-A4-80",
-];
-
 async function main() {
   for (const permission of PERMISSION_CATALOG) {
     await prisma.permission.upsert({
@@ -91,35 +78,7 @@ async function main() {
     console.warn("Trigram search indexes were skipped.", error);
   }
 
-  const sampleProducts = await prisma.product.count({
-    where: { OR: [{ sku: { startsWith: "SS-" } }, { sku: { in: SAMPLE_SKUS } }] },
-  });
-  if (sampleProducts >= 5000) await clearSampleCatalog();
-  else console.log("Sample stationery catalog is already cleared.");
-}
-
-async function clearSampleCatalog() {
-  const sample = { OR: [{ sku: { startsWith: "SS-" } }, { sku: { in: SAMPLE_SKUS } }] };
-  await prisma.saleItem.deleteMany({ where: { product: sample } });
-  await prisma.purchaseItem.deleteMany({ where: { product: sample } });
-  await prisma.stockMovement.deleteMany({ where: { product: sample } });
-  const removed = await prisma.product.deleteMany({ where: sample });
-  await prisma.purchase.deleteMany({ where: { items: { none: {} } } });
-  await prisma.sale.deleteMany({ where: { items: { none: {} } } });
-  await prisma.notification.deleteMany();
-  await prisma.category.deleteMany({ where: { products: { none: {} } } });
-  await prisma.brand.deleteMany({ where: { products: { none: {} } } });
-  await prisma.supplier.deleteMany({
-    where: { id: { in: ["ss-pettah-stationery", "ss-colombo-paper"] }, products: { none: {} }, purchases: { none: {} } },
-  });
-  await prisma.customer.deleteMany({
-    where: { id: { in: ["ss-royal-bookshop", "ss-office-supplies"] }, sales: { none: {} } },
-  });
-  await prisma.documentSequence.updateMany({
-    where: { key: { in: ["STOCK", "PURCHASE", "SALE"] } },
-    data: { value: 0 },
-  });
-  console.log(`Removed ${removed.count} sample products.`);
+  console.log("SS Stationers accounts are ready. Products are left for the store to enter.");
 }
 
 main()
