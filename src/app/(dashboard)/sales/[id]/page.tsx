@@ -32,8 +32,14 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
         <CardContent>
           <div className="mb-6 flex justify-between">
             <div>
-              <p className="text-lg font-semibold">{settings.companyName}</p>
-              <p className="text-sm text-muted-foreground">{settings.address}</p>
+              <div className="flex gap-3">
+                {settings.logo ? <img src={settings.logo} alt="" className="h-14 w-14 rounded-lg object-contain" /> : null}
+                <div>
+                  <p className="text-lg font-semibold">{settings.companyName}</p>
+                  <p className="text-sm text-muted-foreground">{settings.address}</p>
+                  <p className="text-sm text-muted-foreground">{[settings.phone, settings.email].filter(Boolean).join(" · ")}</p>
+                </div>
+              </div>
               <p className="mt-3 text-sm">Bill to {sale.customerName}</p>
               <p className="text-sm text-muted-foreground">{sale.customerPhone} {sale.customerEmail}</p>
             </div>

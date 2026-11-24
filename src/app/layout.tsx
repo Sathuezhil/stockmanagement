@@ -17,6 +17,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("theme");var s=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";var r=!t?"light":t==="system"?s:t;var c=document.documentElement;c.classList.remove("light","dark");c.classList.add(r);c.style.colorScheme=r;}catch(e){}})();`,
+          }}
+        />
         <ThemeProvider>
           {children}
           <Toaster richColors closeButton position="top-right" />

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme-provider";
 import { Bell, LogOut, Menu, Moon, Sun, UserRound } from "lucide-react";
 import { SidebarNav } from "@/components/layout/sidebar";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -14,11 +14,13 @@ export function AppShell({
   children,
   user,
   companyName,
+  logo,
   unread,
 }: {
   children: React.ReactNode;
   user: { name?: string | null; email?: string | null; roleName: string; permissions: string[] };
   companyName: string;
+  logo?: string | null;
   unread: number;
 }) {
   const [open, setOpen] = useState(false);
@@ -26,11 +28,11 @@ export function AppShell({
   return (
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-sidebar-border lg:block">
-        <SidebarNav permissions={user.permissions} companyName={companyName} />
+        <SidebarNav permissions={user.permissions} companyName={companyName} logo={logo} />
       </aside>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent>
-          <SidebarNav permissions={user.permissions} companyName={companyName} onNavigate={() => setOpen(false)} />
+          <SidebarNav permissions={user.permissions} companyName={companyName} logo={logo} onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
       <div className="app-content lg:pl-64">

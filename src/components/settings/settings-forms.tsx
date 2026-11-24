@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CURRENCIES, MAX_IMAGE_BYTES } from "@/lib/constants";
 import { changePasswordAction, saveProfileAction, saveSettingsAction } from "@/server/actions/system";
@@ -43,7 +44,9 @@ export function SettingsForms({
 }) {
   const [taxEnabled, setTaxEnabled] = useState(settings.taxEnabled);
   const [allowNegative, setAllowNegative] = useState(settings.allowNegativeStock);
+  const router = useRouter();
   const [logo, setLogo] = useState(settings.logo ?? "");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [pending, start] = useTransition();
 
   return (
@@ -74,7 +77,10 @@ export function SettingsForms({
                   invoiceFooter: form.get("invoiceFooter"),
                 });
                 if (!result.ok) toast.error(result.error);
-                else toast.success(result.message);
+                else {
+                  toast.success(result.message);
+                  router.refresh();
+                }
               });
             }}>
               <Field label="Company name"><Input name="companyName" defaultValue={settings.companyName} /></Field>
@@ -92,12 +98,17 @@ export function SettingsForms({
                     toast.error("Images must be 50 MB or smaller");
                     return;
                   }
-                  const body = new FormData();
-                  body.set("file", file);
-                  const response = await fetch("/api/upload", { method: "POST", body });
-                  const data = await response.json();
-                  if (!response.ok) toast.error(data.error);
-                  else setLogo(data.url);
+                  setUploadingLogo(true);
+                  try {
+                    const body = new FormData();
+                    body.set("file", file);
+                    const response = await fetch("/api/upload", { method: "POST", body });
+                    const data = await response.json();
+                    if (!response.ok) toast.error(data.error ?? "The logo could not be uploaded");
+                    else setLogo(data.url);
+                  } finally {
+                    setUploadingLogo(false);
+                  }
                 }} />
                 {logo ? <img src={logo} alt="" className="h-16 rounded-lg" /> : null}
               </Field>
@@ -110,7 +121,7 @@ export function SettingsForms({
               <label className="flex items-center justify-between rounded-xl border border-border px-3 py-2 text-sm">Tax enabled<Switch checked={taxEnabled} onCheckedChange={setTaxEnabled} /></label>
               <label className="flex items-center justify-between rounded-xl border border-border px-3 py-2 text-sm">Allow negative stock<Switch checked={allowNegative} onCheckedChange={setAllowNegative} /></label>
               <Field label="Invoice footer" className="md:col-span-2"><Textarea name="invoiceFooter" defaultValue={settings.invoiceFooter ?? ""} /></Field>
-              <Button disabled={pending}>{pending ? "Saving..." : "Save settings"}</Button>
+              <Button disabled={pending || uploadingLogo}>{pending ? "Saving..." : uploadingLogo ? "Uploading logo..." : "Save settings"}</Button>
             </form>
           </CardContent>
         </Card>
@@ -124,7 +135,10 @@ export function SettingsForms({
             start(async () => {
               const result = await saveProfileAction({ name: form.get("name"), phone: form.get("phone") });
               if (!result.ok) toast.error(result.error);
-              else toast.success(result.message);
+              else {
+                toast.success(result.message);
+                router.refresh();
+              }
             });
           }}>
             <Field label="Name"><Input name="name" defaultValue={profile.name} /></Field>

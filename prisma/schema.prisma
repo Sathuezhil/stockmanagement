@@ -391,3 +391,11 @@ model DocumentSequence {
   key   String @id
   value Int    @default(0)
 }
+
+model StoredFile {
+  id          String   @id @default(cuid())
+  filename    String   @unique
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+}

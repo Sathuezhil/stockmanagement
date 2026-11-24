@@ -1,8 +1,7 @@
 import { randomBytes } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { auth } from "@/auth";
 import { MAX_IMAGE_BYTES } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 const TYPES: Record<string, string> = {
@@ -32,8 +31,12 @@ export async function POST(request: Request) {
   if (file.size > MAX_IMAGE_BYTES) return NextResponse.json({ error: "Images must be 50 MB or smaller" }, { status: 400 });
 
   const filename = `${randomBytes(16).toString("hex")}.${extension}`;
-  const directory = path.join(process.cwd(), "public", "uploads");
-  await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, filename), Buffer.from(await file.arrayBuffer()));
-  return NextResponse.json({ url: `/uploads/${filename}` });
+  await prisma.storedFile.create({
+    data: {
+      filename,
+      contentType: file.type,
+      data: Buffer.from(await file.arrayBuffer()),
+    },
+  });
+  return NextResponse.json({ url: `/api/uploads/${filename}` });
 }

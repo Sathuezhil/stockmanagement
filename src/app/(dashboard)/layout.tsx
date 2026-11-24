@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     prisma.notification.count({ where: { isRead: false } }),
   ]);
   return (
-    <AppShell user={session.user} companyName={settings.companyName} unread={unread}>
+    <AppShell user={session.user} companyName={settings.companyName} logo={settings.logo} unread={unread}>
       {children}
     </AppShell>
   );

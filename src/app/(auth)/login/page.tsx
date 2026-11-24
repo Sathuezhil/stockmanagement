@@ -1,17 +1,19 @@
 import { Warehouse } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
+import { getSettings } from "@/server/guard";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const settings = await getSettings();
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
       <section className="relative hidden overflow-hidden bg-[#0b1220] p-12 text-white lg:flex lg:flex-col">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(45,212,191,0.18),transparent_36%),linear-gradient(160deg,#0b1220,#122033)]" />
         <div className="relative flex items-center gap-3">
-          <div className="flex size-11 items-center justify-center rounded-2xl bg-teal-400 text-slate-950">
-            <Warehouse className="size-5" />
+          <div className="flex size-11 items-center justify-center overflow-hidden rounded-2xl bg-teal-400 text-slate-950">
+            {settings.logo ? <img src={settings.logo} alt="" className="size-full object-cover" /> : <Warehouse className="size-5" />}
           </div>
           <div>
-            <p className="text-lg font-semibold">SS Stationers</p>
+            <p className="text-lg font-semibold">{settings.companyName}</p>
             <p className="text-sm text-slate-400">Stationery for schools and offices</p>
           </div>
         </div>

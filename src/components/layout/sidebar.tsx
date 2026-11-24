@@ -37,10 +37,12 @@ const items = [
 export function SidebarNav({
   permissions,
   companyName,
+  logo,
   onNavigate,
 }: {
   permissions: string[];
   companyName: string;
+  logo?: string | null;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -48,8 +50,8 @@ export function SidebarNav({
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="flex items-center gap-3 px-5 py-5">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-teal-500 text-slate-950">
-          <Warehouse className="size-5" />
+        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-teal-500 text-slate-950">
+          {logo ? <img src={logo} alt="" className="size-full object-cover" /> : <Warehouse className="size-5" />}
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold">{companyName}</p>
