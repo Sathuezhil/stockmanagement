@@ -31,6 +31,6 @@ const user = hostedUrl.match(/^postgres(?:ql)?:\/\/([^:@/]+)/)?.[1] ?? "unknown"
 if (process.env.NETLIFY === "true") {
   writeFileSync("src/lib/hosted-db.ts", `import "server-only";\n\nexport const hostedDatabaseUrl = ${JSON.stringify(hostedUrl)};\n`);
 }
-console.log(`Applying the hosted database schema and stationery catalog as ${user}.`);
+console.log(`Applying the hosted database schema as ${user}.`);
 run("npx prisma migrate deploy");
 run("npx tsx prisma/seed.ts");
