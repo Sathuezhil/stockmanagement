@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { findProductByBarcode, isBarcodeScan, isFastScan, noteScanKey } from "@/lib/barcode-scan";
 import { money } from "@/lib/utils";
 import { formatMoney } from "@/lib/format";
 import { savePurchaseAction, saveSaleAction } from "@/server/actions/operations";
@@ -53,6 +54,9 @@ export function OrderForm({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Hit[]>([]);
   const [pending, setPending] = useState(false);
+  const searchRequest = useRef(0);
+  const scanTimes = useRef<number[]>([]);
+  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const totals = useMemo(() => {
     const subtotal = money(lines.reduce((sum, line) => sum + line.quantity * line.unitPrice - (mode === "sale" ? line.discount : 0), 0));
@@ -63,12 +67,26 @@ export function OrderForm({
 
   async function search(value: string) {
     setQuery(value);
+    const requestId = ++searchRequest.current;
     if (!value.trim()) {
       setResults([]);
       return;
     }
     const response = await fetch(`/api/products/search?q=${encodeURIComponent(value)}`);
+    if (requestId !== searchRequest.current) return;
     if (response.ok) setResults(await response.json());
+  }
+
+  async function scanBarcode(code: string) {
+    searchRequest.current += 1;
+    const hit = await findProductByBarcode(code);
+    if (!hit) {
+      setQuery("");
+      setResults([]);
+      toast.error("No product is saved with this barcode");
+      return;
+    }
+    addProduct(hit);
   }
 
   function addProduct(hit: Hit) {
@@ -182,7 +200,27 @@ export function OrderForm({
             ) : null}
           </div>
           <Field label="Add product">
-            <Input value={query} placeholder="Search name, SKU, or barcode" onChange={(event) => void search(event.target.value)} />
+            <Input
+              value={query}
+              placeholder="Search name, SKU, or scan a barcode"
+              onChange={(event) => void search(event.target.value)}
+              onKeyDown={(event) => {
+                noteScanKey(scanTimes.current, event.key);
+                const input = event.currentTarget;
+                if (scanTimer.current) clearTimeout(scanTimer.current);
+                if (event.key === "Enter") {
+                  const code = input.value.trim();
+                  if (!isBarcodeScan(code)) return;
+                  event.preventDefault();
+                  void scanBarcode(code);
+                  return;
+                }
+                scanTimer.current = setTimeout(() => {
+                  const code = input.value.trim();
+                  if (isBarcodeScan(code) && isFastScan(scanTimes.current)) void scanBarcode(code);
+                }, 120);
+              }}
+            />
             {results.length > 0 ? (
               <div className="max-h-48 overflow-auto rounded-xl border border-border">
                 {results.map((hit) => (

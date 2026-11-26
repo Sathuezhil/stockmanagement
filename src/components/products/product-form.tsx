@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { findProductByBarcode, isBarcodeScan, isFastScan, noteScanKey } from "@/lib/barcode-scan";
 import { MAX_IMAGE_BYTES, UNITS } from "@/lib/constants";
 import { productSchema, type ProductInput } from "@/lib/validators";
 import { saveProductAction } from "@/server/actions/catalog";
@@ -77,6 +78,8 @@ export function ProductForm({
   const initialMarkup = markupFromPrices(product?.purchasePrice ?? 0, product?.sellingPrice ?? 0);
   const [markup, setMarkup] = useState(initialMarkup);
   const [percentText, setPercentText] = useState(() => percentTextFromValue(initialMarkup));
+  const scanTimes = useRef<number[]>([]);
+  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema) as Resolver<ProductInput>,
     defaultValues: {
@@ -128,6 +131,19 @@ export function ProductForm({
     router.refresh();
   }
 
+  async function fillNameFromBarcode(code: string) {
+    const hit = await findProductByBarcode(code);
+    if (!hit) {
+      form.setValue("name", "", { shouldValidate: true });
+      form.setValue("barcode", code, { shouldValidate: true });
+      toast.error("No product is saved with this barcode. The number is in Barcode — type the product name.");
+      return;
+    }
+    form.setValue("name", hit.name, { shouldValidate: true });
+    form.setValue("barcode", hit.barcode ?? code, { shouldValidate: true });
+    toast.success(hit.name);
+  }
+
   const image = form.watch("image");
 
   return (
@@ -135,7 +151,26 @@ export function ProductForm({
       <Card>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="Product name" error={form.formState.errors.name?.message} className="sm:col-span-2">
-            <Input {...form.register("name")} />
+            <Input
+              placeholder="Type the name or scan a barcode"
+              {...form.register("name")}
+              onKeyDown={(event) => {
+                noteScanKey(scanTimes.current, event.key);
+                const input = event.currentTarget;
+                if (scanTimer.current) clearTimeout(scanTimer.current);
+                if (event.key === "Enter") {
+                  const code = input.value.trim();
+                  if (!isBarcodeScan(code)) return;
+                  event.preventDefault();
+                  void fillNameFromBarcode(code);
+                  return;
+                }
+                scanTimer.current = setTimeout(() => {
+                  const code = input.value.trim();
+                  if (isBarcodeScan(code) && isFastScan(scanTimes.current)) void fillNameFromBarcode(code);
+                }, 120);
+              }}
+            />
           </Field>
           <Field label="SKU / product code" error={form.formState.errors.sku?.message}>
             <Input {...form.register("sku")} />

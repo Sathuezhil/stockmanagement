@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { findProductByBarcode, isBarcodeScan, isFastScan, noteScanKey } from "@/lib/barcode-scan";
 import { STOCK_TYPES } from "@/lib/constants";
 import { recordStockAction } from "@/server/actions/operations";
 import { Button } from "@/components/ui/button";
@@ -19,15 +20,34 @@ export function StockForm({ initialProductId }: { initialProductId?: string }) {
   const [product, setProduct] = useState<ProductHit | null>(null);
   const [type, setType] = useState("STOCK_IN");
   const [pending, setPending] = useState(false);
+  const searchRequest = useRef(0);
+  const scanTimes = useRef<number[]>([]);
+  const scanTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function search(value: string) {
     setQuery(value);
+    const requestId = ++searchRequest.current;
     if (value.trim().length < 1) {
       setResults([]);
       return;
     }
     const response = await fetch(`/api/products/search?q=${encodeURIComponent(value)}`);
+    if (requestId !== searchRequest.current) return;
     if (response.ok) setResults(await response.json());
+  }
+
+  async function scanBarcode(code: string) {
+    searchRequest.current += 1;
+    const hit = await findProductByBarcode(code);
+    if (!hit) {
+      setQuery("");
+      setResults([]);
+      toast.error("No product is saved with this barcode");
+      return;
+    }
+    setProduct(hit);
+    setQuery("");
+    setResults([]);
   }
 
   async function submit(formData: FormData) {
@@ -60,7 +80,27 @@ export function StockForm({ initialProductId }: { initialProductId?: string }) {
       <CardContent>
         <form action={submit} className="grid max-w-2xl gap-4">
           <Field label="Product">
-            <Input value={product ? `${product.name} (${product.sku})` : query} placeholder="Search by name, SKU, or barcode" onChange={(event) => { setProduct(null); void search(event.target.value); }} />
+            <Input
+              value={product ? `${product.name} (${product.sku})` : query}
+              placeholder="Search by name, SKU, or scan a barcode"
+              onChange={(event) => { setProduct(null); void search(event.target.value); }}
+              onKeyDown={(event) => {
+                noteScanKey(scanTimes.current, event.key);
+                const input = event.currentTarget;
+                if (scanTimer.current) clearTimeout(scanTimer.current);
+                if (event.key === "Enter") {
+                  const code = input.value.trim();
+                  if (!isBarcodeScan(code)) return;
+                  event.preventDefault();
+                  void scanBarcode(code);
+                  return;
+                }
+                scanTimer.current = setTimeout(() => {
+                  const code = input.value.trim();
+                  if (isBarcodeScan(code) && isFastScan(scanTimes.current)) void scanBarcode(code);
+                }, 120);
+              }}
+            />
             {results.length > 0 && !product ? (
               <div className="rounded-xl border border-border bg-card">
                 {results.map((item) => (
