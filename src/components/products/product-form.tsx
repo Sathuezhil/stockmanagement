@@ -196,18 +196,27 @@ export function ProductForm({
             />
           </Field>
           <Field label="Percentage" className="sm:col-span-2">
-            <Input
-              type="text"
-              inputMode="decimal"
-              value={percentText}
-              onChange={(event) => {
-                const { text, percent } = parsePercent(event.target.value);
-                setPercentText(text);
-                setMarkup(percent);
-                const purchase = Number(form.getValues("purchasePrice"));
-                form.setValue("sellingPrice", sellingFromMarkup(Number.isFinite(purchase) ? purchase : 0, percent), { shouldValidate: true });
-              }}
-            />
+            <div className="relative">
+              <Input
+                type="text"
+                inputMode="decimal"
+                value={percentText}
+                className="tabular-nums"
+                onChange={(event) => {
+                  const { text, percent } = parsePercent(event.target.value);
+                  setPercentText(text);
+                  setMarkup(percent);
+                  const purchase = Number(form.getValues("purchasePrice"));
+                  form.setValue("sellingPrice", sellingFromMarkup(Number.isFinite(purchase) ? purchase : 0, percent), { shouldValidate: true });
+                }}
+              />
+              {percentText && percentText !== "-" ? (
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm tabular-nums">
+                  <span className="invisible">{percentText}</span>
+                  <span className="pl-1">%</span>
+                </span>
+              ) : null}
+            </div>
           </Field>
           {product ? null : (
             <Field label="Opening quantity" error={form.formState.errors.quantity?.message}>
