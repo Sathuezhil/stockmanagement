@@ -28,6 +28,22 @@ function markupFromPrices(purchase: number, selling: number) {
   return roundMoney(((selling - purchase) / purchase) * 100);
 }
 
+function percentTextFromValue(value: number) {
+  if (!Number.isFinite(value) || value === 0) return "";
+  return String(value);
+}
+
+function parsePercent(raw: string) {
+  const negative = raw.trim().startsWith("-");
+  let body = raw.replace(/[^\d.]/g, "");
+  const parts = body.split(".");
+  if (parts.length > 1) body = `${parts[0]}.${parts.slice(1).join("")}`;
+  body = body.replace(/^0+(?=\d)/, "");
+  const text = body === "" ? (negative ? "-" : "") : `${negative ? "-" : ""}${body}`;
+  const percent = body === "" || body === "." ? 0 : Number(text);
+  return { text, percent: Number.isFinite(percent) ? percent : 0 };
+}
+
 export function ProductForm({
   categories,
   brands,
@@ -58,7 +74,9 @@ export function ProductForm({
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
-  const [markup, setMarkup] = useState(() => markupFromPrices(product?.purchasePrice ?? 0, product?.sellingPrice ?? 0));
+  const initialMarkup = markupFromPrices(product?.purchasePrice ?? 0, product?.sellingPrice ?? 0);
+  const [markup, setMarkup] = useState(initialMarkup);
+  const [percentText, setPercentText] = useState(() => percentTextFromValue(initialMarkup));
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema) as Resolver<ProductInput>,
     defaultValues: {
@@ -170,19 +188,21 @@ export function ProductForm({
                 onChange: (event) => {
                   const selling = Number(event.target.value);
                   const purchase = Number(form.getValues("purchasePrice"));
-                  setMarkup(markupFromPrices(Number.isFinite(purchase) ? purchase : 0, Number.isFinite(selling) ? selling : 0));
+                  const next = markupFromPrices(Number.isFinite(purchase) ? purchase : 0, Number.isFinite(selling) ? selling : 0);
+                  setMarkup(next);
+                  setPercentText(percentTextFromValue(next));
                 },
               })}
             />
           </Field>
-          <Field label="Markup %" className="sm:col-span-2">
+          <Field label="Percentage" className="sm:col-span-2">
             <Input
-              type="number"
-              step="0.01"
-              value={Number.isFinite(markup) ? markup : 0}
+              type="text"
+              inputMode="decimal"
+              value={percentText}
               onChange={(event) => {
-                const next = Number(event.target.value);
-                const percent = Number.isFinite(next) ? next : 0;
+                const { text, percent } = parsePercent(event.target.value);
+                setPercentText(text);
                 setMarkup(percent);
                 const purchase = Number(form.getValues("purchasePrice"));
                 form.setValue("sellingPrice", sellingFromMarkup(Number.isFinite(purchase) ? purchase : 0, percent), { shouldValidate: true });
