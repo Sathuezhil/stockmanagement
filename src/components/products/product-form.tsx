@@ -15,6 +15,19 @@ import { Input, Select, Textarea } from "@/components/ui/input";
 
 type Option = { id: string; name: string };
 
+function roundMoney(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function sellingFromMarkup(purchase: number, markup: number) {
+  return roundMoney(purchase * (1 + markup / 100));
+}
+
+function markupFromPrices(purchase: number, selling: number) {
+  if (purchase <= 0) return 0;
+  return roundMoney(((selling - purchase) / purchase) * 100);
+}
+
 export function ProductForm({
   categories,
   brands,
@@ -45,6 +58,7 @@ export function ProductForm({
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
+  const [markup, setMarkup] = useState(() => markupFromPrices(product?.purchasePrice ?? 0, product?.sellingPrice ?? 0));
   const form = useForm<ProductInput>({
     resolver: zodResolver(productSchema) as Resolver<ProductInput>,
     defaultValues: {
@@ -134,11 +148,46 @@ export function ProductForm({
               {UNITS.map((unit) => <option key={unit} value={unit}>{unit}</option>)}
             </Select>
           </Field>
-          <Field label="Purchase price" error={form.formState.errors.purchasePrice?.message}>
-            <Input type="number" step="0.01" min="0" {...form.register("purchasePrice")} />
+          <Field label="Purchase per price" error={form.formState.errors.purchasePrice?.message}>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...form.register("purchasePrice", {
+                onChange: (event) => {
+                  const purchase = Number(event.target.value);
+                  form.setValue("sellingPrice", sellingFromMarkup(Number.isFinite(purchase) ? purchase : 0, markup), { shouldValidate: true });
+                },
+              })}
+            />
           </Field>
-          <Field label="Selling price" error={form.formState.errors.sellingPrice?.message}>
-            <Input type="number" step="0.01" min="0" {...form.register("sellingPrice")} />
+          <Field label="Selling per price" error={form.formState.errors.sellingPrice?.message}>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              {...form.register("sellingPrice", {
+                onChange: (event) => {
+                  const selling = Number(event.target.value);
+                  const purchase = Number(form.getValues("purchasePrice"));
+                  setMarkup(markupFromPrices(Number.isFinite(purchase) ? purchase : 0, Number.isFinite(selling) ? selling : 0));
+                },
+              })}
+            />
+          </Field>
+          <Field label="Markup %" className="sm:col-span-2">
+            <Input
+              type="number"
+              step="0.01"
+              value={Number.isFinite(markup) ? markup : 0}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                const percent = Number.isFinite(next) ? next : 0;
+                setMarkup(percent);
+                const purchase = Number(form.getValues("purchasePrice"));
+                form.setValue("sellingPrice", sellingFromMarkup(Number.isFinite(purchase) ? purchase : 0, percent), { shouldValidate: true });
+              }}
+            />
           </Field>
           {product ? null : (
             <Field label="Opening quantity" error={form.formState.errors.quantity?.message}>
