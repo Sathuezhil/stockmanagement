@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 export function PrintButton({ label = "Print" }: { label?: string }) {
@@ -8,4 +9,13 @@ export function PrintButton({ label = "Print" }: { label?: string }) {
       {label}
     </Button>
   );
+}
+
+export function AutoPrint({ enabled }: { enabled: boolean }) {
+  useEffect(() => {
+    if (!enabled) return;
+    const timer = window.setTimeout(() => window.print(), 400);
+    return () => window.clearTimeout(timer);
+  }, [enabled]);
+  return null;
 }

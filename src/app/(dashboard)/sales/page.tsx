@@ -30,6 +30,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   return (
     <div>
       <PageHeader title="Sales" description="Confirming a sale reduces stock. A sale cannot take more than the available quantity.">
+        <Button variant="outline" asChild><Link href="/pos">POS</Link></Button>
         <Button asChild><Link href="/sales/new">New sale</Link></Button>
       </PageHeader>
       <Card>

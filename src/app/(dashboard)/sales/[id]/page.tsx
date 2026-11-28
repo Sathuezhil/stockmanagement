@@ -3,30 +3,41 @@ import { auth } from "@/auth";
 import { PageHeader } from "@/components/data/page-header";
 import { OrderForm } from "@/components/orders/order-form";
 import { SaleActions } from "@/components/orders/document-actions";
-import { PrintButton } from "@/components/print-button";
+import { AutoPrint, PrintButton } from "@/components/print-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TD, TH, THead, TR } from "@/components/ui/table";
 import { formatMoney } from "@/lib/format";
+import { first } from "@/lib/utils";
 import { getSettingsDto } from "@/server/guard";
 import { getSale } from "@/server/services/commerce";
 import { listCustomers } from "@/server/services/parties";
 
 export const dynamic = "force-dynamic";
 
-export default async function SaleDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SaleDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
   if (!session?.user.permissions.includes("sales.manage")) redirect("/?error=forbidden");
   const { id } = await params;
+  const sp = await searchParams;
   const [sale, settings, customers] = await Promise.all([getSale(id), getSettingsDto(), listCustomers()]);
   if (!sale) notFound();
   return (
     <div className="space-y-6">
+      <AutoPrint enabled={first(sp.print) === "1"} />
       <PageHeader title={sale.invoiceNumber} description={`${sale.customerName} · ${sale.date}`}>
-        <Badge value={sale.status} />
-        <Badge value={sale.paymentStatus} />
-        <SaleActions id={sale.id} status={sale.status} paymentStatus={sale.paymentStatus} />
-        <PrintButton />
+        <div className="no-print flex flex-wrap items-center gap-2">
+          <Badge value={sale.status} />
+          <Badge value={sale.paymentStatus} />
+          <SaleActions id={sale.id} status={sale.status} paymentStatus={sale.paymentStatus} />
+          <PrintButton label="Print bill" />
+        </div>
       </PageHeader>
       <Card>
         <CardContent>
